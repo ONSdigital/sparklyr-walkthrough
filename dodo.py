@@ -59,6 +59,7 @@ def task_extract_and_load_result_data():
         print(g_zipped_filepath)
     
     yield {
+        'name': g_zipped_filepath.name,
         'file_deps': [g_zipped_filepath],
         'targets': [f'{g_zipped_filepath.name}_loaded'],
         'actions': [
@@ -76,6 +77,7 @@ def task_extract_and_load_item_data():
         print(g_zipped_filepath)
     
     yield {
+        'name': g_zipped_filepath.name,
         'file_deps': [g_zipped_filepath],
         'targets': [f'{g_zipped_filepath.name}_loaded'],
         'actions': [
