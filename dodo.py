@@ -2,9 +2,10 @@ from pathlib import Path
 from lib.source import download_mot_data, download_supporting_docs
 
 
-START = 2010
-END = 2011
+START = 2005
+END = 2017
 DATA_DIR = Path('./data')
+DATA_DIR_HDFS = Path('/tmp/mot')
 
 
 def task_download_docs():
@@ -31,7 +32,7 @@ def task_download_data():
     """Download data for an individual year."""
 
     for year in range(START, END+1):
-        ext = 'txt.gz' if year <= 2016 else '.zip'
+        ext = '.txt.gz' if year <= 2016 else '.zip'
         fnames = [
             f'test_result_{year}{ext}',
             f'test_item_{year}{ext}',
@@ -50,36 +51,55 @@ def task_download_data():
         
 def task_extract_and_load_result_data():
     
-    raw_data_dir = DATA_DIR / 'raw' 
+    raw_data_dir = DATA_DIR / 'raw'     
+    hdfs_filepath = DATA_DIR_HDFS / 'results.csv'
     
-    for g_zipped_filepath in raw_data_dir.glob('test_result_*txt.gz'):
+    for year in range(START, END+1):
+        ext = '.txt.gz' if year <= 2016 else '.zip'        
+        g_zipped_filepath = raw_data_dir / f'test_result_{year}{ext}'
+        target = g_zipped_filepath.with_suffix(".loaded")
     
         yield {
             'name': g_zipped_filepath.name,
             'file_dep': [g_zipped_filepath],
-            'targets': [f'{g_zipped_filepath.name}_loaded'],
+            'targets': [target],
             'actions': [
-                f'gunzip -c {g_zipped_filepath} | hdfs dfs -appendToFile - /user/dte_chrism/mot/results.txt', 
-                f'touch {g_zipped_filepath.with_suffix(".loaded")}'
+                f'gunzip -c {g_zipped_filepath} | hdfs dfs -appendToFile - {hdfs_filepath}', 
+                f'touch {target}'
             ]
         }
 
-    
+
 def task_extract_and_load_item_data():
     
     raw_data_dir = DATA_DIR / 'raw' 
-    
-    for g_zipped_filepath in raw_data_dir.glob('test_item_*txt.gz'):
-    
+    hdfs_filepath = DATA_DIR_HDFS / 'items.csv'
+        
+    for year in range(START, END+1):
+        ext = '.txt.gz' if year <= 2016 else '.zip'        
+        g_zipped_filepath = raw_data_dir / f'test_item_{year}{ext}'
+        target = g_zipped_filepath.with_suffix(".loaded")
+
         yield {
             'name': g_zipped_filepath.name,
             'file_dep': [g_zipped_filepath],
-            'targets': [f'{g_zipped_filepath.name}_loaded'],
+            'targets': [target],
             'actions': [
-                f'gunzip -c {g_zipped_filepath} | hdfs dfs -appendToFile - /user/dte_chrism/mot/items.txt', 
-                f'touch {g_zipped_filepath.with_suffix(".loaded")}'
+                f'gunzip -c {g_zipped_filepath} | hdfs dfs -appendToFile - {hdfs_filepath}', 
+                f'touch {target}'
             ]
         }
 
+
+def task_create_impala_table():
     
+    sql_schema = DATA_DIR / 'mot-impala-schema.sql'
+    assert sql_schema.exists()
     
+    impala_host = 'cdhwn-04682bdf.odts-sandpit.internal'
+    
+    return {
+        'actions': [
+            f'impala-shell -i {impala_host}  -f {sql_schema} --var=data_location={DATA_DIR_HDFS}'
+        ]
+    }
