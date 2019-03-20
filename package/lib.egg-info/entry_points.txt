@@ -1,3 +1,0 @@
-[console_scripts]
-download_mot_data = lib.source:download_mot_data
-
