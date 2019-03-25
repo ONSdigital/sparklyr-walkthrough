@@ -31,7 +31,7 @@
 #  * Authentication to the cluster (Account settings --> Hadoop authentication, enter windows credentials)
 #
 #  * Setting Environemnt variable to tell Pyspark to use Python 3:
-#    * `PYSPARK_PYTHON` = `/usr/local/bin/python3`
+#  * `PYSPARK_PYTHON` = `/usr/local/bin/python3`
 
 
 ### Import all necessary packages to work with Spark
@@ -167,14 +167,16 @@ rescue = rescue.withColumnRenamed("OriginofCall", "OriginOfCall")
 
 rescue.printSchema()
 
-## Exercise 1 ##############
-# Rename PumpHoursTotal --> JobHours
-# Rename AnimalGroupParent --> AnimalGroup
+## Exercise 1 ##########################################################################
+
+#> Rename PumpHoursTotal --> JobHours
+#>
+#> Rename AnimalGroupParent --> AnimalGroup
 
 rescue = rescue.withColumnRenamed("PumpHoursTotal", "JobHours")
 rescue = rescue.withColumnRenamed("AnimalGroupParent", "AnimalGroup")
 
-############################
+########################################################################################
 
 ### Convert Dates from String to Date format
 
@@ -194,9 +196,10 @@ recent_rescue = rescue.filter('CalYear > 2012')
 
 recent_rescue.limit(10).toPandas()
 
-## Exercise 2 ################
 
-# Filter the recent data to find all the those with AnimalGroup equal to 'Fox'
+## Exercise 2 ############################################################################
+
+#> Filter the recent data to find all the those with AnimalGroup equal to 'Fox'
 
 recent_foxes = recent_rescue.filter(recent_rescue.AnimalGroup == 'Fox')
 # Or equivilantly
@@ -205,7 +208,7 @@ recent_foxes = recent_rescue.filter('AnimalGroup == "Fox"')
 recent_foxes.limit(10).toPandas()
 recent_foxes.select('DateTimeOfCall', 'Description').show(truncate=False)
 
-##############################
+##########################################################################################
 
 
 #----------------------------
@@ -265,11 +268,51 @@ result.limit(10).toPandas()
 # Seems that horses make up a lot of the more expensive calls, makes sense.
 
 
-## Exercise 3 ####################
+## Exercise 3 ################################################################################
 
-# Sort the incidents in terms of there duration, look at the top 10 and the bottom 10.
+#> Sort the incidents in terms of there duration, look at the top 10 and the bottom 10.
 
-################################## 
+top_10 = (
+    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+    .sort("IncidentDuration", ascending=False)
+    .limit(10)
+)
+top_10.toPandas()
+
+bottom_10 = (
+    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+    .sort("IncidentDuration", ascending=True)
+    .limit(10)
+)
+bottom_10.toPandas()
+
+##############################################################################################
+
+# So it looks like we may have a lot of Missing values to account for.
+
+## Handeling Missing values
+
+# Lets count the number of missing values in these Columns. They have a `isNull` and 
+# `isNotNull` function, which can be used with `.filter()` 
+
+recent_rescue.filter(recent_rescue.TotalCost.isNull()).count()
+
+recent_rescue.filter(recent_rescue.IncidentDuration.isNull()).count()
+
+# Looks like this effects just 23 rows, for now lets row these from the dataset. We 
+# could combine the two above operations. Or use the `.na.drop()` function on DataFrames
+recent_rescue = recent_rescue.na.drop(subset=["TotalCost", "IncidentDuration"])
+
+# Now lets rerun our sorting from above.
+bottom_10 = (
+    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+    .sort("IncidentDuration", ascending=True)
+    .limit(10)
+)
+bottom_10.toPandas()
+
+# Much better.
+
 
 #### A Note of sorting
 
@@ -302,23 +345,20 @@ recent_rescue = recent_rescue.withColumn(
     "SnakeFlag", f.when(recent_rescue.AnimalGroup == "Snake", 1).otherwise(0)
 )
 
-## Exercise 4 ########################
+## Exercise 4 ####################################################################################
 
-# Add an additional flag to indicate when PropertyCategory is 'Dwelling'.
+#> Add an additional flag to indicate when PropertyCategory is 'Dwelling'.
 recent_rescue = recent_rescue.withColumn(
     "DwellingFlag", f.when(recent_rescue.PropertyCategory == "Dwelling", 1).otherwise(0)
 )
 
-
-# Subset the data to rows when both the snake and property flag is 1
+#> Subset the data to rows when both the snake and property flag is 1
 recent_rescued_pet_snakes = recent_rescue.filter(
     (recent_rescue.SnakeFlag == 1) & (recent_rescue.DwellingFlag == 1) 
 )
 recent_rescued_pet_snakes.limit(20).toPandas()
 
-
-######################################
-
+##################################################################################################
 
 #----------------------
 ## Analysing By Group 
@@ -366,17 +406,15 @@ avg_cost_by_animal = (
     )
     .groupBy("AnimalGroup")
     .agg(
-        f.avg('TotalCost').alias('Mean'), 
-        f.count('TotalCost').alias('Count')
-    )
-    .sort("Mean", ascending=False)
+        f.avg('TotalCost'))
+    .sort("avg(TotalCost)", ascending=False)
     .toPandas()
 )
 avg_cost_by_animal
 
-## Exercise 5 ####################
+## Exercise 5 ################################################################################
 
-# Get total counts of incidents for the different animal types since 2009
+#> Get total counts of incidents for the different animal types since 2009
 
 incident_counts = (
     rescue.groupBy(rescue.AnimalGroup)
@@ -384,7 +422,7 @@ incident_counts = (
     .toPandas()
 )
 
-# Sort the results in descending order and show the top 10
+#> Sort the results in descending order and show the top 10
 
 incident_counts = (
     rescue.groupBy(rescue.AnimalGroup)
@@ -394,7 +432,7 @@ incident_counts = (
     .toPandas()
 )
 
-##################################
+##############################################################################################
 
 ### A Few other Tips and Tricks
 
@@ -477,10 +515,10 @@ result = spark.sql(
 )
 result.limit(10).toPandas()
 
-# Exercise 6 ###################
+# Exercise 6 ###############################################################################
 
-# Using SQL, find the top 10 most expensive call outs by AnimalGroup aggregated 
-# by the sum total of cost.
+# >Using SQL, find the top 10 most expensive call outs by AnimalGroup aggregated 
+# >by the sum total of cost.
 
 result = spark.sql(
     """SELECT AnimalGroup, sum(TotalCost) FROM rescue
@@ -491,7 +529,7 @@ result = spark.sql(
 result.show(truncate=False)
 
 
-################################
+############################################################################################
 
 #------------------------------
 ## Writing Data
@@ -543,6 +581,13 @@ spark.sql('DROP TABLE IF EXISTS training.my_rescue_table')
 
 #* Clear the Console output with Ctr+L
 
+### IPython
+
+#* who / whos
+
+#* reset
+
+#* pwd / cd / ls / mv / cp
 
 #-----------------------
 ## Further Resource
