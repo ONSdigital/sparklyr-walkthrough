@@ -1,1 +1,10 @@
-data/
+__pycache__
+.bash_history
+.cache/
+.impalahistory
+.ipython/
+.local/
+.oracle_jre_usage/
+.pip/
+.ssh/
+.viminfo
