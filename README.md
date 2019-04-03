@@ -41,9 +41,9 @@ project and the contained training material, and allow each participant work at 
 during and after this session. 
 
 *  Trainees can then start their own workbenck session by going to the newly copied project, and 
-selecting `Open Workbench`, and choosing `Python 3`, with Engine profile of `1 CPU / 2 Gb Memory`.
+selecting `Open Workbench`, and choosing `Python 3`, with Engine profile of `0.5 CPU / 2 Gb Memory`.
 
-* All material covered is contained within the `analysis/` directory. 
+* All material covered is contained within the `material/` directory. 
 
 
 ## Additional Setup within DAP
