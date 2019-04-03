@@ -488,6 +488,8 @@ result.limit(10).toPandas()
 
 ## Exercise 6 ###############################################################################
 
+# >Using SQL, find the top 10 most expensive call outs by AnimalGroup aggregated 
+# >by the sum total of cost.
 
 
 
