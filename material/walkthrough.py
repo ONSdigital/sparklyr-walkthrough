@@ -31,7 +31,7 @@
 #  * Authentication to the cluster (Account settings --> Hadoop authentication, enter windows credentials)
 #
 #  * Setting Environemnt variable to tell Pyspark to use Python 3:
-# * `PYSPARK_PYTHON` = `/usr/local/bin/python3`
+#  * `PYSPARK_PYTHON` = `/usr/local/bin/python3`
 #  
 #  * Setting up the link to Artifactory to install Python packages:
 # * `PIP_INDEX_URL` = `http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/api/pypi/yr-python/simple` 
