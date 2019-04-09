@@ -52,6 +52,12 @@ Beyond this course, note that some additional setup is required when working in 
   * Authentication to the cluster (Account settings --> Hadoop authentication, enter windows credentials)
   * Setting Environemnt variable to tell Pyspark to use Python 3:
       * `PYSPARK_PYTHON` = `/usr/local/bin/python3`
+  * Setting up the link to Artifactory to install Python packages:
+    * `PIP_INDEX_URL` = `http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/api/pypi/yr-python/simple` 
+    * `PIP_TRUSTED_HOST` = `art-p-01`
+    * Where `<USERNAME>` is your windows username and `<PASSWORD>` is your hashed password from artifactory
+     (see instructions in the artifactory section of the Data Explorers Support Pages)
+
 
 ## To Create this Course on the Training Environment
 
