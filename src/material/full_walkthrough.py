@@ -32,6 +32,12 @@
 #
 #  * Setting Environemnt variable to tell Pyspark to use Python 3:
 #  * `PYSPARK_PYTHON` = `/usr/local/bin/python3`
+#  
+#  * Setting up the link to Artifactory to install Python packages:
+# * `PIP_INDEX_URL` = `http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/api/pypi/yr-python/simple` 
+# * `PIP_TRUSTED_HOST` = `art-p-01`
+# * Where `<USERNAME>` is your windows username and `<PASSWORD>` is your hashed password from artifactory
+#    (see instructions, artifactory section; https://share.sp.ons.statistics.gov.uk/sites/odts/wiki/Wiki/Components%20Introduction.aspx)
 
 
 ### Import all necessary packages to work with Spark
@@ -88,7 +94,7 @@ pd.set_option("display.html.table_schema", True)
 # To find data if its on HDFS
 spark.sql("show databases").show(truncate=False)
 
-# To find what tabels are in the database
+# To find what tables are in the database
 spark.sql("use training")
 spark.sql("show tables").show(truncate=False)
 
@@ -120,7 +126,7 @@ rescue = spark.read.csv(
     "/tmp/training/animal-rescue.csv", header=True, inferSchema=True, 
 )
 
-# The .show(n=20, truncate=True) function is an action that displays a DataFrame
+# The .show(n=10, truncate=True) function is an action that displays a DataFrame
 
 rescue.show(10, truncate=False)
 
@@ -129,7 +135,7 @@ rescue.show(10, truncate=False)
 # 2.  convert to pandas df
 # 3.  copy to text file
 
-# Options 1 
+# Option 1 
 rescue.select('DateTimeOfCall', 'FinalDescription', 'AnimalGroupParent').show(truncate=False)
 
 # Option 2
@@ -162,7 +168,7 @@ rescue = rescue.withColumnRenamed("PumpCount", "EngineCount")
 rescue = rescue.withColumnRenamed("FinalDescription", "Description")
 rescue = rescue.withColumnRenamed("HourlyNotionalCost(£)", "HourlyCost")
 rescue = rescue.withColumnRenamed("IncidentNotionalCost(£)", "TotalCost")
-# Fix a typeo 
+# Fix a typo 
 rescue = rescue.withColumnRenamed("OriginofCall", "OriginOfCall")
 
 rescue.printSchema()
