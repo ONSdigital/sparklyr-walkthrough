@@ -35,7 +35,10 @@ with the following:
 
 ## New Trainees
 
-*  First 'fork' this project by clicking the button in the top right of CDSW on this project page, 
+* Login to CDSW with the credentials sent out prior to the course. You should see a 
+  project called 'PySpark Walkthrough' which contains this repositories content.
+
+*  Within CDSW, 'fork' this project by clicking the grey button in the top right of CDSW on the project page, 
 and choose your assigned username as the destination for the fork. This will create a copy of this 
 project and the contained training material, and allow each participant work at their own pace 
 during and after this session. 
