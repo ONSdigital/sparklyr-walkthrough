@@ -8,3 +8,5 @@ __pycache__
 .pip/
 .ssh/
 .viminfo
+.ipynb_checkpoints
+.vscode
