@@ -8,7 +8,7 @@ Steps:
 """
 from pathlib import Path
 import sys
-sys.path.append('./src/scripts')
+sys.path.append('./src/')
 
 from scripts.clean import clean_rescue_data, clean_population_data
 from scripts.process import filter_out_answers
@@ -22,24 +22,18 @@ DATA_DIR = ROOT_DIR / 'src' / 'data'
 # =====
 def task_clean_rescue_data():
     return {
-        'actions': [
-            (clean_rescue_data, [DATA_DIR])
-        ],
-        'target': [
-            DATA_DIR / 'clean' / 'animal-rescue.csv',   
-        ] 
+        'file_dep': [DATA_DIR / 'raw' / 'animal-rescue.csv'],
+        'actions': [(clean_rescue_data, [DATA_DIR])],
+        'targets': [DATA_DIR / 'clean' / 'animal-rescue.csv'] 
     }
 
 
 def task_clean_population_data():
 
     return {
-        'actions': [
-            (clean_population_data, [DATA_DIR])
-        ],
-        'target': [
-            DATA_DIR / 'clean' / 'population-by-postcode.csv',   
-        ] 
+        'file_dep': [DATA_DIR / 'raw' / 'Postcode_Estimates_Table_1.csv'],
+        'actions': [(clean_population_data, [DATA_DIR])],
+        'targets': [DATA_DIR / 'clean' / 'population-by-postcode.csv'] 
     }
 
 # Load 
@@ -60,8 +54,8 @@ def task_transfer_data():
         cmd = (transfer_to_hdfs, [source_file, destination_file])
 
         yield {
-            'name': source_file.name
-            'file_deps': [source_file],
+            'name': source_file.name,
+            'file_dep': [source_file],
             'actions': [cmd],
         }
 
@@ -81,6 +75,7 @@ def task_filter_answers():
     )
 
     return {
+        'file_dep': [src_path],
         'actions': [cmd],
         'targets': [material_dest_path, exercixe_dest_path]
     }

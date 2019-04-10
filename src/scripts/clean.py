@@ -10,13 +10,13 @@ def clean_rescue_data(data_dir):
     raw_df = pd.read_csv(str(input_datapath), encoding='cp1255')
     raw_df.to_csv(str(output_datapath), index=False)
     
-    return output_datapath
+    return str(output_datapath)
     
 
 def clean_population_data(data_dir):
 
     input_datapath = data_dir / 'raw' / 'Postcode_Estimates_Table_1.csv'
-    output_datapath = data_dir / 'clean' / 'population_by_postcode.csv'
+    output_datapath = data_dir / 'clean' / 'population-by-postcode.csv'
 
     df = pd.read_csv(input_datapath)
 
@@ -39,5 +39,5 @@ def clean_population_data(data_dir):
 
     df.to_csv(str(output_datapath), index=False)
     
-    return output_datapath
+    return str(output_datapath)
 
