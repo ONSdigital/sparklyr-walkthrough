@@ -104,9 +104,9 @@ sdf
 
 # Note that the table is not yet displayed
 # Spark is built on the concept of transformations and actions.
-#   * Transformations are lazily evaluated expressions. This form the set of 
+#   * **Transformations** are lazily evaluated expressions. This form the set of 
 #     instructions that will be sent to the cluster.  
-#   * Actions trigger the computation to be performed on the cluster and the 
+#   * **Actions** trigger the computation to be performed on the cluster and the 
 #     results accumulated locally in this session.
 #
 # Multiple transformations can be combined,and only when an action is triggered 
