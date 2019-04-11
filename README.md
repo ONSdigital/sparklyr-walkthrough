@@ -1,22 +1,20 @@
 # Walkthrough of Data Manipulation in PySpark
 
-**Duration: 2-3 hours**
+**Duration: 3-4 hours**
 
 ## Overview
 
-This course aims to introduce the CDSW environment and give an overview of working with 
-PySpark within DAP. During the session we will focus on using Spark's DataFrame API to 
-performs a number of common data manipulations tasks as we walkthough the analysis of 
-an example dataset. The course will include several short exercises to build familiarity, 
-and also leave attendees with some more indepth exercises to explore themselves following
-the course. 
+This course aims to introduce the CDSW environment and give an overview of working with PySpark within DAP. During the session we will focus on building hands on experience of using Spark's DataFrame API to perform a number of common data manipulations tasks as we walk through the analysis of an example dataset.  The course will include several short exercises to build familiarity, and also leave attendees with some more in depth exercises to explore themselves following the course.
+
+As Spark and distributed computing are themselves very broad and complex topics, this course has been designed to be a more targeted deep dive to give participants an initial taste of working with CDSW and what the PySpark library can do.  We aim to provide participants with enough understanding and experience to get going, and provide them with pointers on how to find help and further their own understanding going forwards after the course.  
 
 ## Prerequisites
 
-To get the most out of this course, participants should have at least a basic familiarity 
-with the following:
-  * Python 
-  * SQL
+We will be focusing on using Python’s PySpark library in the this course. And so to get the most out of it, participants should have at least a basic familiarity with Python’s syntax. 
+
+In addition we will touch briefly on the following areas, and while not essential, any prior experience would be beneficial.  
+* SQL
+*	The `pandas` Python library
 
 ## Learning Outcomes 
 
