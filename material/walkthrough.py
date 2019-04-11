@@ -104,9 +104,9 @@ sdf
 
 # Note that the table is not yet displayed
 # Spark is built on the concept of transformations and actions.
-#   * Transformations are lazily evaluated expressions. This form the set of 
+#   * **Transformations** are lazily evaluated expressions. This form the set of 
 #     instructions that will be sent to the cluster.  
-#   * Actions trigger the computation to be performed on the cluster and the 
+#   * **Actions** trigger the computation to be performed on the cluster and the 
 #     results accumulated locally in this session.
 #
 # Multiple transformations can be combined,and only when an action is triggered 
@@ -126,7 +126,8 @@ rescue = spark.read.csv(
     "/tmp/training/animal-rescue.csv", header=True, inferSchema=True, 
 )
 
-# The .show(n=10, truncate=True) function is an action that displays a DataFrame
+# The `.show()` function is an action that displays a DataFrame and has defaults of 
+# `.show(n=20, truncate=True)`.
 
 rescue.show(10, truncate=False)
 
@@ -143,6 +144,10 @@ rescue.select('DateTimeOfCall', 'FinalDescription', 'AnimalGroupParent').show(tr
 # with limit
 rescue_df = rescue.limit(10).toPandas()
 rescue_df
+
+# Option 3
+# Use .show(truncate=False) and highlight the output in the right hand side, then copy 
+# and paste to a new file. 
 
 # To just get the column names and data types
 rescue.printSchema()
@@ -506,19 +511,30 @@ result.limit(10).toPandas()
 #------------------------------
 
 ## To HDFS 
-username='dte_chrism'
-rescue_with_pop.write.parquet(f'/user/{username}/rescue_with_pop.parquet')
+rescue_with_pop.write.parquet(f'/tmp/rescue_with_pop.parquet')
 
-# Also methods for CSV and JSON
+# Note that if the file exists, it will not let you overwright it. You must first delete
+# it with the hdfs tool. This can be run from the console with 
+!hdfs dfs -rm -r /tmp/rescue_with_pop.parquet
+
+# Also note that each user and workspace will have its own home directory which you can,
+# save work to.
+# ````python
+# username='your-username-on-hue'
+# path = f'/user/{username}/rescue_with_pop.parquet'
+# rescue_with_pop.write.parquet(f'/user/{username}/rescue_with_pop.parquet')
+# ````
 
 # Benefits of parquet is that type schema are captured
-# Its also a column format which makes loading in subsets of columns a lot faster
-# Is not designed to be updated in place (imutable), so may have to delete and 
-# recreate files, which requires useing the terminal commands
+# Its also a column format which makes loading in subsets of columns a lot faster for 
+# large datasets.
 
-# Example of using hdfs tool to delete a file
-!hdfs dfs -rm -r path/to/file/to/delete
+# However it is not designed to be updated in place (imutable), so may have to delete and 
+# recreate files, which requires using the terminal commands. It is also harder to view 
+# the data in HUE, as it first needs to be loaded into a table (beyond the scope of this
+# session).
 
+# There are also methods for writing CSV and JSON formats. 
 
 ## To a SQL Table (HIVE)
 
@@ -531,11 +547,13 @@ spark.sql('DROP TABLE IF EXISTS training.my_rescue_table')
 
 ## Final Exercise Questions
 
-# How much do cats Cost the London Fire Brigade each year on average? 
-# What percentage of the total cost is this? 
-
-# Which Postcode districts reported the most/least incidents?
-# When normalised by population count, which Postcode districts report the most/least incidents?
+# 1. How much do cats cost the London Fire Brigade each year on average? 
+# 2. What percentage of the total cost is this?
+# 3. Extend the above to work out the percentage cost for each animal type.
+# 4. Which Postcode districts reported the most and least incidents?
+# 5. When normalised by population count, which Postcode districts report the most and least incidents?
+# 6. Create outputs for the above questions and save them back to hdfs as a csv file
+# in your users home directory. 
 
 #-----------------------
 ## Tips and Tricks

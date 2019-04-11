@@ -8,11 +8,11 @@ Steps:
 """
 from pathlib import Path
 import sys
-sys.path.append('src/scripts')
+sys.path.append('src')
 
-from clean import clean_rescue_data, clean_population_data
-from process import filter_out_answers
-from transfer import transfer_to_hdfs
+from scripts.clean import clean_rescue_data, clean_population_data
+from scripts.process import filter_out_answers
+from scripts.transfer import transfer_to_hdfs
 
 # Paths
 ROOT_DIR = Path(__file__).parent

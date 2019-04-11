@@ -10,3 +10,4 @@ __pycache__
 .viminfo
 .ipynb_checkpoints
 .vscode
+.doit.db

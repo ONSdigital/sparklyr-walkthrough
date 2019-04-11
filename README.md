@@ -40,9 +40,7 @@ experience would be beneficial.
     * Joining DataFrames
     * Using SQL with Spark
 
-# Setup Instructions
-
-## New Trainees
+# Setup Instructions for Trainees
 
 * Login to CDSW with the credentials sent out prior to the course. You should see a 
   project called 'PySpark Walkthrough' which contains this repository's content.
@@ -58,7 +56,7 @@ selecting `Open Workbench`, and choosing `Python 3`, with Engine profile of `0.5
 * All material covered is contained within the `material/` directory. 
 
 
-## Additional Setup within DAP
+# Additional Setup within DAP
 
 Beyond this course, note that some additional setup is required when working in DAP, specifically:
   * Authentication to the cluster (Account settings --> Hadoop authentication, enter Windows credentials)
@@ -71,22 +69,7 @@ Beyond this course, note that some additional setup is required when working in 
      (see instructions in the artifactory section of the Data Explorers Support Pages)
 
 
-## To Create this Course on the Training Environment
+# Instructions for Trainers
 
-The following notes are to help fellow trainers recreate these scenarios on the training environment.
-
-Repository layout:
-* `material` holds the final training walkthroughs ready for teaching.
-* `src` holds all resources for building the course material, including copies of the data used in training.    
-* `build.py` performs all steps to prepare data and recreate material for the course under `/material`. 
-
-The script can be run with:
-
-```
-    python3 build.py
-```
-
-### Data Sources
-
-* [Animal Rescue Data](https://data.london.gov.uk/dataset/animal-rescue-incidents-attended-by-lfb)
-* [Population by Postcode Data](https://www.nomisweb.co.uk/census/2011/postcode_headcounts_and_household_estimates) Table 1: All postcodes
+Consult [CONTRIBUTING.md](CONTRIBUTING.md) page for details on how to setup this material on the DAP CATS 
+training environment. 
