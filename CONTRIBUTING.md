@@ -43,7 +43,7 @@ as the course progresses.
 These are included at regular intervals to check participants can follow along. An example of the format, 
 along with an answer is shown below.  
 
-```
+```python
 ## Exercise 2 ############################################################################
 
 #> Filter the recent data to find all the those with AnimalGroup equal to 'Fox'
@@ -78,7 +78,7 @@ kept and not removed.
 
 An example of the above exercise after the filtering process is shown below:
 
-```
+```python
 ## Exercise 2 ############################################################################
 
 #> Filter the recent data to find all the those with AnimalGroup equal to 'Fox'
