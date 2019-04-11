@@ -9,4 +9,4 @@ __pycache__
 .ssh/
 .viminfo
 .ipynb_checkpoints
-.vscode
+.vscode.doit.db
