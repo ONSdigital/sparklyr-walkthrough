@@ -2,12 +2,22 @@
 ## Introduction 
 #----------------------------
 
-# This course aims to give you a high level overview of working with the DataFrame 
+# This course aims to give you hands on experience in working with the DataFrame 
 # API in PySpark. We will not cover all functionality but instead focus on getting 
 # up and running and performing a few common operations on an example dataset. 
 #
-# Prerequisites:
-#  * Python, SQL
+### Format 
+#
+#   * Walkthrough typical data analysis
+#   * Several short exercises to build familiarity, 
+#   * Some more in-depth exercises to explore after the course.
+#   * You will have access to the training environment for a short time following
+#     the course.
+# 
+### Prerequisites:
+#
+#  * Basic Python, 
+#  * SQL and `pandas` optional but beneficial
 
 ### CDSW Environment
 
@@ -44,7 +54,6 @@
 
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as f
-import pandas as pd
 
 # Functions are kept in 2 places in PySpark:
 # * The `pyspark.sql.functions` module
@@ -53,7 +62,7 @@ import pandas as pd
 # To find out the functions available in the sql module
 dir(f)
 
-### Finding more Help
+### Finding Help
 
 # To get more help with a module/function
 help(f.to_date)
@@ -67,11 +76,11 @@ help(f.to_date)
 
 # For this Training setup: 
 #  *  max executor cores = 2
-#  *  max executor memory = 2g (but this included overheads)
+#  *  max executor memory = 2g (this included overheads)
 
 spark = (
     SparkSession.builder.appName("my-spark-app")
-    .config("spark.executor.memory", "1536m")
+    .config("spark.executor.memory", "1500m")
     .config("spark.executor.cores", 2)
     .config("spark.dynamicAllocation.enabled", 'true')
     .config('spark.dynamicAllocation.maxExecutors', 4)
@@ -81,6 +90,7 @@ spark = (
 )
 
 # Handy option for better output display in pandas dfs
+import pandas as pd
 pd.set_option("display.html.table_schema", True)
 
 #----------------------------
@@ -91,7 +101,7 @@ pd.set_option("display.html.table_schema", True)
 
 ### From HDFS
 
-# To find data if its on HDFS
+# To find data if its on HDFS as a HIVE table
 spark.sql("show databases").show(truncate=False)
 
 # To find what tables are in the database
@@ -109,7 +119,7 @@ sdf
 #   * **Actions** trigger the computation to be performed on the cluster and the 
 #     results accumulated locally in this session.
 #
-# Multiple transformations can be combined,and only when an action is triggered 
+# Multiple transformations can be combined, and only when an action is triggered 
 # are these executed on the cluster, after which the results are returned. 
 
 sdf.show(10)
@@ -122,13 +132,18 @@ df
 
 ### Reading in Data From a CSV
 
+#### Data set: Animal rescue incidents by the London Fire Brigade.
+
 rescue = spark.read.csv(
-    "/tmp/training/animal-rescue.csv", header=True, inferSchema=True, 
+    "/tmp/training/animal-rescue.csv", 
+    header=True, inferSchema=True, 
 )
+
+# To just get the column names and data types
+rescue.printSchema()
 
 # The `.show()` function is an action that displays a DataFrame and has defaults of 
 # `.show(n=20, truncate=True)`.
-
 rescue.show(10, truncate=False)
 
 # It can get real messy to display everything this way with wide data, recomendations are:
@@ -148,9 +163,6 @@ rescue_df
 # Option 3
 # Use .show(truncate=False) and highlight the output in the right hand side, then copy 
 # and paste to a new file. 
-
-# To just get the column names and data types
-rescue.printSchema()
 
 #----------------------------
 ## Data Preprocessing
@@ -212,12 +224,12 @@ recent_rescue.limit(10).toPandas()
 
 #> Filter the recent data to find all the those with AnimalGroup equal to 'Fox'
 
-recent_foxes = recent_rescue.filter(recent_rescue.AnimalGroup == 'Fox')
+foxes = rescue.filter(rescue.AnimalGroup == 'Fox')
 # Or equivilantly
-recent_foxes = recent_rescue.filter('AnimalGroup == "Fox"')
+foxes = rescue.filter('AnimalGroup == "Fox"')
 
-recent_foxes.limit(10).toPandas()
-recent_foxes.select('DateTimeOfCall', 'Description').show(truncate=False)
+foxes.limit(10).toPandas()
+foxes.select('DateTimeOfCall', 'Description').show(truncate=False)
 
 ##########################################################################################
 
@@ -226,7 +238,7 @@ recent_foxes.select('DateTimeOfCall', 'Description').show(truncate=False)
 ## Data Exploration 
 #----------------------------
 
-### Investigate Incident Number
+### Investigate `IncidentNumber`
 
 # Find the number of Rows and Columns
 n_rows = rescue.count()
@@ -236,20 +248,20 @@ n_columns = len(rescue.columns)
 n_unique = rescue.select("IncidentNumber").distinct().count()
 n_rows == n_unique
 
-### Exploring Animal Groups
+### Exploring `AnimalGroups`
 
 # Next lets explore the number of different animal groups
-n_groups = recent_rescue.select("AnimalGroup").distinct().count()
+n_groups = rescue.select("AnimalGroup").distinct().count()
 n_groups
 
 # What are they?
-animal_groups = recent_rescue.select("AnimalGroup").distinct()
-animal_groups.limit(30).toPandas()
+animal_groups = rescue.select("AnimalGroup").distinct()
+animal_groups.toPandas()
 
 
 ### Adding Columns and Sorting
 
-# JobHours gives the total number of hours for engines attending the incident, 
+# `JobHours` gives the total number of hours for engines attending the incident, 
 # e.g. if 2 engines attended for an hour JobHours = 2
 # 
 # So to get an idea of the duration of the incident we have to divide JobHours 
@@ -258,15 +270,21 @@ animal_groups.limit(30).toPandas()
 # Lets add another column that calculates this
 
 # withColumn can be used to either create a new column, or overwrite an existing one.
-recent_rescue = recent_rescue.withColumn(
-    "IncidentDuration", recent_rescue.JobHours / recent_rescue.EngineCount
+rescue = rescue.withColumn(
+    "IncidentDuration", 
+    rescue.JobHours / rescue.EngineCount
 )
-recent_rescue.printSchema()
+
+rescue.printSchema()
 
 # Lets subset the columns to just show the incident number, duration, total cost and description
-result = (
-    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+result = rescue.select(
+            "IncidentNumber",
+            "TotalCost",
+            "IncidentDuration",
+            "Description"
 )
+
 result.show(truncate=False)
 
 # Lets investigate the highest total cost incidents
