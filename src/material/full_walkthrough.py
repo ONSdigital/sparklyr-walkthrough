@@ -278,20 +278,16 @@ rescue = rescue.withColumn(
 rescue.printSchema()
 
 # Lets subset the columns to just show the incident number, duration, total cost and description
-result = rescue.select(
-            "IncidentNumber",
-            "TotalCost",
-            "IncidentDuration",
-            "Description"
-)
+result = rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
 
 result.show(truncate=False)
 
 # Lets investigate the highest total cost incidents
 result = (
-    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+    rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
     .sort("TotalCost", ascending=False)
 )
+
 result.limit(10).toPandas()
 
 # Seems that horses make up a lot of the more expensive calls, makes sense.
@@ -301,15 +297,16 @@ result.limit(10).toPandas()
 
 #> Sort the incidents in terms of there duration, look at the top 10 and the bottom 10.
 
+#> Do you notice anything strange?
 top_10 = (
-    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+    rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
     .sort("IncidentDuration", ascending=False)
     .limit(10)
 )
 top_10.toPandas()
 
 bottom_10 = (
-    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+    rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
     .sort("IncidentDuration", ascending=True)
     .limit(10)
 )
@@ -317,24 +314,25 @@ bottom_10.toPandas()
 
 ##############################################################################################
 
-# So it looks like we may have a lot of Missing values to account for.
+# So it looks like we may have a lot of missing values to account for (which is why there are 
+# a lot of blanks).
 
 ## Handeling Missing values
 
-# Lets count the number of missing values in these Columns. They have a `isNull` and 
+# Lets count the number of missing values in these columns. Columns have a `isNull` and 
 # `isNotNull` function, which can be used with `.filter()` 
 
-recent_rescue.filter(recent_rescue.TotalCost.isNull()).count()
+rescue.filter(rescue.TotalCost.isNull()).count()
 
-recent_rescue.filter(recent_rescue.IncidentDuration.isNull()).count()
+rescue.filter(rescue.IncidentDuration.isNull()).count()
 
-# Looks like this effects just 23 rows, for now lets row these from the dataset. We 
+# Looks like this effects just 38 rows, for now lets row these from the dataset. We 
 # could combine the two above operations. Or use the `.na.drop()` function on DataFrames
-recent_rescue = recent_rescue.na.drop(subset=["TotalCost", "IncidentDuration"])
+rescue = rescue.na.drop(subset=["TotalCost", "IncidentDuration"])
 
 # Now lets rerun our sorting from above.
 bottom_10 = (
-    recent_rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
+    rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
     .sort("IncidentDuration", ascending=True)
     .limit(10)
 )
@@ -343,7 +341,7 @@ bottom_10.toPandas()
 # Much better.
 
 
-#### Side Note on sorting and Spark API
+#### Side note on sorting and Spark's API
 
 # Confusingly, there are often several ways to interact with the Spark API to get the 
 # same result. Part of this is by design to allow it to support SQL like phrasing of 
@@ -351,7 +349,7 @@ bottom_10.toPandas()
 #
 # Sorting is one place you may come across this. All the below do the same thing!
 # 
-# ```
+# ```python
 #   import pyspark.sql.functions as f
 #   df.sort(f.desc("age"))
 #   df.sort(df.age.desc())
@@ -361,14 +359,14 @@ bottom_10.toPandas()
 
 # And if you wanted to sort by multiple columns, you have a few options too.
 # 
-# ```
+# ```python
 #   import pyspark.sql.functions as f
 #   df.sort(["age", "name"], ascending=False)
 #   df.orderBy(f.desc("age"), "name")
 #   df.orderBy(["age", "name"], ascending=[0, 1])
 # ```
 #
-# Advice is to be consistent in useing one approach. Here I've used the syntax 
+# Advice is to be consistent in using one approach. Here I've used the syntax 
 # thats most similar to pandas with `df.sort("age", ascending=False)`
 
 ## Adding Indicator Variables/Flags
@@ -379,22 +377,28 @@ bottom_10.toPandas()
 
 # For this example lets look at all the incidents that involved snakes in someones
 # home (Dwelling).
-recent_rescue = recent_rescue.withColumn(
-    "SnakeFlag", f.when(recent_rescue.AnimalGroup == "Snake", 1).otherwise(0)
+rescue = rescue.withColumn(
+    "SnakeFlag", f.when(rescue.AnimalGroup == "Snake", 1).otherwise(0)
 )
+
+# Note that we can filter with multiple conditions using the pipe `|` to mean OR and 
+# `&` to mean AND. Each condition must be surrounded with parenthesis. 
+recent_snakes = rescue.filter((rescue.CalYear > 2015) & (rescue.SnakeFlag == 1))
+recent_snakes.toPandas()
+
 
 ## Exercise 4 ####################################################################################
 
 #> Add an additional flag to indicate when PropertyCategory is 'Dwelling'.
-recent_rescue = recent_rescue.withColumn(
-    "DwellingFlag", f.when(recent_rescue.PropertyCategory == "Dwelling", 1).otherwise(0)
+rescue = rescue.withColumn(
+    "DwellingFlag", f.when(rescue.PropertyCategory == "Dwelling", 1).otherwise(0)
 )
 
-#> Subset the data to rows when both the snake and property flag is 1
-recent_rescued_pet_snakes = recent_rescue.filter(
-    (recent_rescue.SnakeFlag == 1) & (recent_rescue.DwellingFlag == 1) 
+#> Subset the data to rows when both the 'snake' and 'property' flag is 1
+pet_snakes = rescue.filter(
+    (rescue.SnakeFlag == 1) & (rescue.DwellingFlag == 1) 
 )
-recent_rescued_pet_snakes.limit(20).toPandas()
+pet_snakes.limit(20).toPandas()
 
 ##################################################################################################
 
@@ -407,23 +411,23 @@ cost_by_animal = recent_rescue.groupBy("AnimalGroup").agg(f.mean("TotalCost"))
 cost_by_animal.printSchema()
 
 # Lets sort by average cost and display the highest
-cost_by_animal.sort("avg(TotalCost)", ascending=False).limit(10).toPandas()
+cost_by_animal = cost_by_animal.sort("avg(TotalCost)", ascending=False).limit(10).toPandas()
 
 # Notice anything out the ordinary?
 
 # Lets compare the number of Goats vs Horses. We can filter with multiple conditions
-# using the pipe | to mean OR and & to mean AND.
-goat_vs_horse = recent_rescue.filter(
-    (recent_rescue.AnimalGroup == "Horse") | (recent_rescue.AnimalGroup == "Goat")
+# using the pipe `|` to mean OR and `&` to mean AND.
+goat_vs_horse = rescue.filter(
+    (rescue.AnimalGroup == "Horse") | (rescue.AnimalGroup == "Goat")
 )
 goat_vs_horse.limit(10).toPandas()
 
 # Count the number of each animal type
-goat_vs_horse.groupBy("AnimalGroup").count().show()
+goat_vs_horse.groupBy("AnimalGroup").agg(f.count("AnimalGroup")).show()
 
 # Lets see what that incident was.
 result = (
-    recent_rescue.filter(recent_rescue.AnimalGroup == "Goat")
+    rescue.filter(rescue.AnimalGroup == "Goat")
     .select('AnimalGroup', 'JobHours', 'Description')
     .limit(10).toPandas()
 )
@@ -439,8 +443,8 @@ result = (
 # get python to evaluate expressions over multiple lines. 
 
 avg_cost_by_animal = (
-    recent_rescue.filter(
-        (recent_rescue.AnimalGroup == "Horse") | (recent_rescue.AnimalGroup == "Goat")
+    rescue.filter(
+        (rescue.AnimalGroup == "Horse") | (rescue.AnimalGroup == "Goat")
     )
     .groupBy("AnimalGroup")
     .agg(
@@ -452,11 +456,11 @@ avg_cost_by_animal
 
 ## Exercise 5 ################################################################################
 
-#> Get total counts of incidents for the different animal types on the full dataset
+#> Get total counts of incidents for each different animal types
 
 incident_counts = (
     rescue.groupBy('AnimalGroup')
-    .agg(f.count('AnimalGroup').alias('count'))
+    .agg(f.count('AnimalGroup'))
     .toPandas()
 )
 
@@ -464,24 +468,24 @@ incident_counts = (
 
 incident_counts = (
     rescue.groupBy('AnimalGroup')
-    .agg(f.count('AnimalGroup').alias('count'))
-    .sort('count', ascending=False)
+    .agg(f.count('AnimalGroup'))
+    .sort('count(AnimalGroup)', ascending=False)
     .limit(10)
     .toPandas()
 )
 
 ##############################################################################################
 
-### A Few other Tips and Tricks
+### A Few Tips and Tricks
 
-# I've rewritten the above using a few additional functions to give it more 
+# I've rewritten the above method chaining example using a few additional functions to give it more 
 # flexibly, like `.isin()` and making use of mutliple functions to`.agg()`, 
 #
-# Note also that the alias function is a way of specifying the name of the column
+# Note also that the `alias()` function is a way of specifying the name of the column
 # in the output 
 
 avg_cost_by_animal = (
-    recent_rescue.filter(
+    rescue.filter(
         recent_rescue.AnimalGroup.isin(
             "Horse", 
             "Goat", 
@@ -555,13 +559,13 @@ result.limit(10).toPandas()
 
 ## Exercise 6 ###############################################################################
 
-# >Using SQL, find the top 10 most expensive call outs by AnimalGroup aggregated 
-# >by the sum total of cost.
+# >Using SQL, find the top 10 most expensive call outs aggregated by the total sumed cost for 
+# >each AnimalGroup. 
 
 result = spark.sql(
     """SELECT AnimalGroup, sum(TotalCost) FROM rescue
             GROUP BY AnimalGroup
-            ORDER BY sum(AnimalGroup) DESC
+            ORDER BY sum(TotalCost) DESC
             LIMIT 10"""
 )
 result.show(truncate=False)
@@ -584,7 +588,6 @@ rescue_with_pop.write.parquet(f'/tmp/rescue_with_pop.parquet')
 # save work to.
 # ````python
 # username='your-username-on-hue'
-# path = f'/user/{username}/rescue_with_pop.parquet'
 # rescue_with_pop.write.parquet(f'/user/{username}/rescue_with_pop.parquet')
 # ````
 
@@ -611,10 +614,10 @@ spark.sql('DROP TABLE IF EXISTS training.my_rescue_table')
 ## Final Exercise Questions
 
 # 1. How much do cats cost the London Fire Brigade each year on average? 
-# 2. What percentage of the total cost is this?
+# 2. What percentage of their total cost (across all years) is this?
 # 3. Extend the above to work out the percentage cost for each animal type.
 # 4. Which Postcode districts reported the most and least incidents?
-# 5. When normalised by population count, which Postcode districts report the most and least incidents?
+# 5. When normalised by population count, which Postcode districts report the most and least incidents (incidents per person)?
 # 6. Create outputs for the above questions and save them back to hdfs as a csv file
 # in your users home directory. 
 
