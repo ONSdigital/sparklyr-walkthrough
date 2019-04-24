@@ -61,9 +61,9 @@ selecting `Open Workbench`, and choosing `Python 3`, with Engine profile of `0.5
 Beyond this course, note that some additional setup is required when working in DAP, specifically:
   * Authentication to the cluster (Account settings --> Hadoop authentication, enter Windows credentials)
   * Setting up the link to Artifactory to install Python packages:
-      r <- getOption("repos")
-      r['CRAN'] <- "http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/list/cran-org"
-      options(repos = r)
+      * r <- getOption("repos")
+      * r['CRAN'] <- "http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/list/cran-org"
+      * options(repos = r)
     * Where `<USERNAME>` is your Windows username and `<PASSWORD>` is your hashed password from artifactory
      (see instructions in the artifactory section of the Data Explorers Support Pages)
 
