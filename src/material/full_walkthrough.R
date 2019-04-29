@@ -2,8 +2,8 @@
 ## Introduction 
 #----------------------------
 
-# This course aims to give you hands on experience in working with the DataFrame 
-# API in PySpark. We will not cover all functionality but instead focus on getting 
+# This course aims to give you hands on experience in working with spark from R. 
+# We will not cover all functionality but instead focus on getting 
 # up and running and performing a few common operations on an example dataset. 
 #
 ### Format 
@@ -16,8 +16,8 @@
 # 
 ### Prerequisites:
 #
-#  * Basic Python, 
-#  * SQL and `pandas` optional but beneficial
+#  * Basic R, 
+#  * SQL and `dplyr` optional but beneficial
 
 ### CDSW Environment
 
@@ -52,16 +52,15 @@
 
 
 ### Import all necessary packages to work with Spark
-
 install.packages("sparklyr")
 
-#
+
 library(sparklyr)
 library(dplyr)
-library(DBI)
+
 
 ### Finding Help
-
+?spark_config
 
 #----------------------------
 ## Configure the Spark Session
@@ -87,6 +86,10 @@ spark_config(sc)
 # Check connection is open
 spark_connection_is_open(sc)
 
+## Sparklyr allows you to write R code to work with data in a Spark cluster. 
+# The dplyr interface means that you can write the same dplyr-style R code, whether you are working with data on your machine 
+# or on a Spark cluster.
+
 #----------------------------
 ## Load the Data
 #----------------------------
@@ -96,12 +99,12 @@ spark_connection_is_open(sc)
 ### From HDFS
 
 # To find data if its on HDFS as a HIVE table
-src_databases(sc)
+src_databases(sc) 
 
 # To find what tables are in the database
 tbl_change_db(sc, "training")
+DBI::dbGetQuery(sc, "show tables in training")
 
-dbGetQuery(sc, "show tables in training")
 
 # Reading Data from SQL into a spark dataframe
 sdf <- spark_read_table(sc, "department_budget", header = TRUE)
@@ -125,34 +128,30 @@ head(sdf)
 
 #### Data set: Animal rescue incidents by the London Fire Brigade.
 
-rescue = spark_read_csv(sc, 
-    "/tmp/training/animal-rescue.csv", 
-    header=TRUE, infer_schema=TRUE, 
-)
+rescue <- spark_read_csv(sc, "/tmp/training/animal-rescue.csv", header=TRUE, infer_schema=TRUE)
 
-# To just get the column names and data types
-sdf_schema(rescue)
+# To get the column names and data types
+glimpse(rescue)
+
 
 # The `head()` function is an action that displays a DataFrame 
 head(rescue)
 
 # It can get real messy to display everything this way with wide data, recomendations are:
 # 1.  Subset to fewer columns
-# 2.  convert to data.frame
-# 3.  copy to text file
+# 2.  convert to data.frame and use `print()`
+
 
 # Option 1 
-rescue %>% select('DateTimeOfCall', 'FinalDescription', 'AnimalGroupParent')
+rescue %>% 
+  select('DateTimeOfCall', 'FinalDescription', 'AnimalGroupParent')
 
 # Option 2
-# Warning converting to pandas will bring back all the data, so first subset the rows 
+# Warning using `collect()` will bring back all the data into R, so first subset the rows 
 # with limit
 rescue_df <- rescue %>% head(10) %>% collect()
-rescue_df
+print(rescue_df)
 
-# Option 3
-# Use .show(truncate=False) and highlight the output in the right hand side, then copy 
-# and paste to a new file. 
 
 #----------------------------
 ## Data Preprocessing
@@ -160,15 +159,17 @@ rescue_df
 
 # First, there are a lot of columns related to precise geographic position
 # which we will not use in this analysis, so lets drop them for now.
-rescue = rescue %>% select(
-   - WardCode, 
-   - BoroughCode, 
-   - Easting_m, 
-   - Northing_m, 
-   - Easting_rounded, 
-   - Northing_rounded
+rescue <- rescue %>% 
+  select(
+     - WardCode, 
+     - BoroughCode, 
+     - Easting_m, 
+     - Northing_m, 
+     - Easting_rounded, 
+     - Northing_rounded
 )
-sdf_schema(rescue)
+
+glimpse(rescue)
 
 
 # Rename column to a more descriptive name
@@ -176,12 +177,13 @@ rescue <- rescue %>%
   rename(EngineCount = PumpCount,
          Description = FinalDescription,
          HourlyCost = HourlyNotionalCostGBP,
-         TotalCost =IncidentNotionalCostGBP)
+         TotalCost = IncidentNotionalCostGBP)
 
 # Fix a typo 
-rescue <- rescue %>% rename(OriginOfCall = OriginofCall)
+rescue <- rescue %>% 
+  rename(OriginOfCall = OriginofCall)
 
-sdf_schema(rescue)
+glimpse(rescue)
 
 ## Exercise 1 ##########################################################################
 
@@ -189,8 +191,445 @@ sdf_schema(rescue)
 #>
 #> Rename AnimalGroupParent --> AnimalGroup
 
-rescue = rescue %>% rename( JobHours= PumpHoursTotal)
-rescue = rescue %>% rename(AnimalGroup = AnimalGroupParent)
+rescue <- rescue %>% rename(JobHours = PumpHoursTotal)
+rescue <- rescue %>% rename(AnimalGroup = AnimalGroupParent)
 
 ########################################################################################
 
+### Convert Dates from String to Date format
+
+rescue %>% 
+  mutate(DateTimeOfCall = to_date(DateTimeOfCall, "dd/MM/yyyy")) %>% 
+  collect() %>% 
+  print()
+
+
+### Filter data to just last 7 years
+
+recent_rescue <- rescue %>% filter(CalYear > 2012)
+
+recent_rescue %>% 
+  head(10) %>%
+  collect() %>%
+  print()
+
+## Exercise 2 ############################################################################
+
+#> Filter the recent data to find all the those with AnimalGroup equal to 'Fox'
+
+foxes <- rescue %>% filter(AnimalGroup == 'Fox')
+
+foxes %>% 
+  select(DateTimeOfCall, Description) %>%
+  collect() %>%
+  print()
+
+##########################################################################################
+
+
+#----------------------------
+## Data Exploration 
+#----------------------------
+
+### Investigate `IncidentNumber`
+
+# Find the number of Rows and Columns
+n_rows <- rescue %>% sdf_nrow()
+n_columns <- rescue %>% sdf_ncol()
+
+# We have an IncidentNumber column, lets check that this is unique.
+n_unique <- rescue %>%  
+  distinct(IncidentNumber) %>% 
+  sdf_nrow()
+n_rows == n_unique
+
+### Exploring `AnimalGroups`
+
+# Next lets explore the number of different animal groups
+n_groups <- rescue %>% 
+  distinct(AnimalGroup) %>% 
+  sdf_nrow()
+
+n_groups
+
+# What are they?
+animal_groups <- rescue %>% distinct(AnimalGroup)
+animal_groups
+
+### Adding Columns and Sorting
+
+# `JobHours` gives the total number of hours for engines attending the incident, 
+# e.g. if 2 engines attended for an hour JobHours = 2
+# 
+# So to get an idea of the duration of the incident we have to divide JobHours 
+# by the number of engines in attendance. 
+#
+# Lets add another column that calculates this
+
+# withColumn can be used to either create a new column, or overwrite an existing one.
+rescue <- rescue %>% 
+  mutate(IncidentDuration = JobHours / EngineCount)
+
+glimpse(rescue)
+
+# Lets subset the columns to just show the incident number, duration, total cost and description
+result <-  rescue %>% 
+  select(IncidentNumber, TotalCost, IncidentDuration, Description)
+
+result %>%
+  collect() %>%
+  print()
+
+# Lets investigate the highest total cost incidents
+result <-  rescue %>% 
+  select(IncidentNumber, TotalCost, IncidentDuration, Description) %>%
+  arrange(desc(TotalCost))
+
+result %>% 
+  head(10) %>% 
+  collect() %>%
+  print()
+
+# Seems that horses make up a lot of the more expensive calls, makes sense.
+
+
+## Exercise 3 ################################################################################
+
+#> Sort the incidents in terms of there duration, look at the top 10 and the bottom 10.
+
+#> Do you notice anything strange?
+top_10 <- rescue %>% 
+  select(IncidentNumber, TotalCost, IncidentDuration, Description) %>%
+   arrange(desc(IncidentDuration)) %>%
+   head(10)
+
+top_10
+
+bottom_10 <- rescue %>% 
+  select(IncidentNumber, TotalCost, IncidentDuration, Description) %>%
+   arrange(IncidentDuration) %>%
+   head(10)
+
+bottom_10
+
+##############################################################################################
+
+# So it looks like we may have a lot of missing values to account for (which is why there are 
+# a lot of blanks).
+
+## Handeling Missing values
+
+# Lets count the number of missing values in these columns. 
+# The `is.na` function can be used with `filter()` to find missing values
+
+rescue %>% 
+  filter(is.na(TotalCost)) %>% 
+  sdf_nrow()
+rescue %>% 
+  filter(is.na(IncidentDuration)) %>% 
+  sdf_nrow()
+
+
+# Looks like this effects just 38 rows, for now lets remove these from the dataset. 
+rescue <- rescue  %>% 
+  filter(!is.na(TotalCost) | !is.na(IncidentDuration))
+
+# Now lets rerun our sorting from above.
+bottom_10 <- rescue %>% 
+  select(IncidentNumber, TotalCost, IncidentDuration, Description) %>%
+   arrange(IncidentDuration) %>%
+   head(10)
+
+bottom_10
+
+# Much better.
+
+
+
+## Adding Indicator Variables/Flags
+
+# Lets create some extra columns to act as flags in the data to indicate rows of interest
+# for downstream analysis. Typically these are set based on a particular grouping or
+# calculation result we want to remember.
+
+# For this example lets look at all the incidents that involved snakes in someones
+# home (Dwelling).
+rescue <- rescue %>%
+  mutate(SnakeFlag = ifelse(AnimalGroup == "Snake", 1, 0))
+
+# Note that we can filter with multiple conditions.
+# Using the pipe `|` represents OR  
+# Using `&` or a comma',' represents AND. 
+recent_snakes <- rescue %>% 
+  filter(CalYear > 2015 & SnakeFlag == 1)
+recent_snakes
+
+## Exercise 4 ####################################################################################
+
+#> Add an additional flag to indicate when PropertyCategory is 'Dwelling'.
+rescue <- rescue %>%
+  mutate(DwellingFlag = ifelse(PropertyCategory == "Dwelling", 1, 0))
+
+#> Subset the data to rows when both the 'snake' and 'property' flag is 1
+pet_snakes <- rescue %>% 
+  filter(SnakeFlag == 1 & DwellingFlag == 1)
+
+pet_snakes %>% 
+  collect() %>%
+  print()
+
+##################################################################################################
+
+#----------------------
+## Analysing By Group 
+#----------------------
+
+# Lets look at this more closely and find the average cost by AnimalGroup
+cost_by_animal <- recent_rescue %>% 
+  group_by(AnimalGroup) %>% 
+  summarise(MeanCost = mean(TotalCost))
+
+glimpse(cost_by_animal)
+
+# Lets sort by average cost and display the highest
+cost_by_animal <- cost_by_animal %>% 
+  arrange(desc(MeanCost)) %>% 
+  head(10)
+
+cost_by_animal
+
+# Notice anything out the ordinary?
+
+# Lets compare the number of Goats vs Horses. We can filter with multiple conditions
+# using the pipe `|` to mean OR and `&` to mean AND.
+goat_vs_horse <- rescue %>% 
+  filter(AnimalGroup == "Horse" | AnimalGroup == "Goat")
+
+goat_vs_horse %>% 
+  head(10) %>% 
+  collect() %>% 
+  print()
+
+# Count the number of each animal type
+
+goat_vs_horse %>% 
+  group_by(AnimalGroup) %>% 
+  summarise(n())
+
+# Lets see what that incident was.
+result <- rescue %>%
+  filter(AnimalGroup == "Goat") %>% 
+  select(AnimalGroup, JobHours, Description) %>%
+  head(10)
+
+result
+
+# Just one expensive goat it seems!
+
+### Combining Multiple Operations with Method Chaining
+
+# Note, the above was a fair bit of work involving multiple stages. Once we 
+# are more clear with what we want, several of these steps can be combined by
+# chaining them together. Code written in this way gets long fast, and so its 
+# encouraged to lay it out verticaly with indentation, and use parentheses to
+# get python to evaluate expressions over multiple lines. 
+
+avg_cost_by_animal <-
+    rescue %>% 
+      filter(AnimalGroup == "Horse" | AnimalGroup == "Goat") %>%
+      group_by(AnimalGroup) %>%
+      summarise(AvgTotal = mean(TotalCost)) %>%
+      arrange(desc(AvgTotal))
+
+avg_cost_by_animal
+
+## Exercise 5 ################################################################################
+
+#> Get total counts of incidents for each different animal types
+
+incident_counts <- rescue %>% 
+  group_by(AnimalGroup) %>%
+  summarise(count = n())
+
+incident_counts
+
+#> Sort the results in descending order and show the top 10
+
+incident_counts %>%
+    arrange(desc(count)) %>%
+    head(10)
+    
+
+
+##############################################################################################
+
+### A Few Tips and Tricks
+
+# I've rewritten the above method chaining example using a few additional functions to give it more 
+# flexibly, like `%in%` and making use of mutliple functions to`summarise()` by, 
+#
+
+
+avg_cost_by_animal <- rescue %>%
+  filter(AnimalGroup %in%  c("Horse", "Goat", "Cat", "Bird")) %>% 
+  group_by(AnimalGroup) %>%
+  summarise(Min = min(TotalCost),
+            Mean = mean(TotalCost),
+            Max = max(TotalCost),
+            Count = n()) %>%
+  arrange(desc(Mean))
+
+avg_cost_by_animal  %>% 
+  collect() %>% 
+  print()
+
+
+#------------------------
+## Joining Data
+#------------------------
+
+# Lets load in another data source to indicate population based on postcode, and join that 
+# onto the rescue data
+
+filepath  <- "/tmp/training/population_by_postcode.csv"
+population <- spark_read_csv(sc, filepath, header=TRUE, infer_schema=TRUE)
+
+glimpse(population)
+population 
+
+# We have this for each postcode, so lets aggregate before joining
+outward_code_pop  <- population %>%
+    select(OutwardCode, Total) %>%
+    group_by(OutwardCode) %>%
+    summarise(Population = sum(Total))
+
+outward_code_pop 
+
+# Now lets join this based on the Postcode Outward code
+
+# As these columns names are slightly different, we can express this mapping in the
+# on argument.
+rescue_with_pop <- rescue %>% 
+  left_join(outward_code_pop, by =c("PostcodeDistrict" = "OutwardCode"))
+
+
+rescue_with_pop %>%
+  head(10) %>% 
+  collect() %>%
+  print()
+
+#---------------------------
+## Using SQL
+#---------------------------
+
+# You can also swap between sparklyr and sql during your workflow by using the DBI package
+
+# As we read this data from CSV (not from a Hive Table), we need to first register a
+# temporary table to use the SQL interface. If you have read in data from an existing SQL 
+# table, you don't need this step
+library(DBI)
+
+sdf_register(rescue, 'rescue')
+
+# You can then do SQL queries 
+result <- dbGetQuery(sc, 
+    "SELECT AnimalGroup, count(AnimalGroup) FROM rescue
+            GROUP BY AnimalGroup
+            ORDER BY count(AnimalGroup) DESC"
+)
+result %>% head(10)
+
+## Exercise 6 ###############################################################################
+
+# >Using SQL, find the top 10 most expensive call outs aggregated by the total sumed cost for 
+# >each AnimalGroup. 
+
+result <- dbGetQuery(sc, 
+    "SELECT AnimalGroup, sum(TotalCost) FROM rescue
+            GROUP BY AnimalGroup
+            ORDER BY sum(TotalCost) DESC
+            LIMIT 10"
+)
+result
+
+
+
+############################################################################################
+
+#------------------------------
+## Writing Data
+#------------------------------
+
+## To HDFS 
+spark_write_parquet(rescue_with_pop, '/tmp/rescue_with_pop.parquet')
+
+# Note that if the file exists, it will not let you overwright it. You must first delete
+# it with the hdfs tool. This can be run from the console with 
+!hdfs dfs -rm -r /tmp/rescue_with_pop.parquet
+
+# Also note that each user and workspace will have its own home directory which you can,
+# save work to.
+# ````R
+# username <- 'your-username-on-hue'
+# spark_write_parquet(rescue_with_pop, '/user/{username}/rescue_with_pop.parquet')
+# ````
+
+# Benefits of parquet is that type schema are captured
+# Its also a column format which makes loading in subsets of columns a lot faster for 
+# large datasets.
+
+# However it is not designed to be updated in place (imutable), so may have to delete and 
+# recreate files, which requires using the terminal commands. It is also harder to view 
+# the data in HUE, as it first needs to be loaded into a table (beyond the scope of this
+# session).
+
+# There are also methods for writing CSV and JSON formats. 
+
+## To a SQL Table (HIVE)
+
+sdf_register(rescue_with_pop, 'rescue_with_pop')
+dbGetQuery(sc, 'CREATE TABLE training.my_rescue_table AS SELECT * FROM rescue_with_pop')
+
+# Delete table
+dbGetQuery(sc, 'DROP TABLE IF EXISTS training.my_rescue_table')
+
+
+## Final Exercise Questions
+
+# 1. How much do cats cost the London Fire Brigade each year on average? 
+# 2. What percentage of their total cost (across all years) is this?
+# 3. Extend the above to work out the percentage cost for each animal type.
+# 4. Which Postcode districts reported the most and least incidents?
+# 5. When normalised by population count, which Postcode districts report the most and least incidents (incidents per person)?
+# 6. Create outputs for the above questions and save them back to hdfs as a csv file
+# in your users home directory. 
+
+#-----------------------
+## Tips and Tricks
+#-----------------------
+
+### Editor
+
+#* double click = selct word; tripple click = select whole line
+
+#* Tab completion
+
+#* Run larger sections with - Shift + PgUp / PgDn then Ctr+Enter
+
+#* Clear the Console output with Ctr+L
+
+
+#-----------------------
+## Further Resource
+#-----------------------
+#
+# * Pluralsight Courses
+#
+# * sparklyr Documentation
+#
+# * StackOverflow
+#
+# * Text Books
+#    *  Spark the Definitive Guide: https://www.amazon.co.uk/Spark-Definitive-Guide-Bill-Chambers/dp/1491912219
+#
+# * Data Explorers Slack Channel
