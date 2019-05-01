@@ -571,8 +571,7 @@ spark_write_parquet(rescue_with_pop, '/tmp/rescue_with_pop.parquet')
 
 # Note that if the file exists, it will not let you overwright it. You must first delete
 # it with the hdfs tool. This can be run from the console with 
-system('hdfs dfs -rm -r /tmp/rescue_with_pop.parquet')
-
+system("hdfs dfs -rm -r /tmp/rescue_with_pop.parquet")
 
 # Also note that each user and workspace will have its own home directory which you can,
 # save work to.
@@ -633,6 +632,8 @@ dbGetQuery(sc, 'DROP TABLE IF EXISTS training.my_rescue_table')
 # * Pluralsight Courses
 #
 # * sparklyr Documentation
+#
+# * sparklyr cheatsheet https://ugoproto.github.io/ugo_r_doc/sparklyr.pdf 
 #
 # * StackOverflow
 #

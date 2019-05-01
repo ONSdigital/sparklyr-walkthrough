@@ -595,6 +595,8 @@ dbGetQuery(sc, 'DROP TABLE IF EXISTS training.my_rescue_table')
 #
 # * sparklyr Documentation
 #
+# * sparklyr cheatsheet https://ugoproto.github.io/ugo_r_doc/sparklyr.pdf 
+#
 # * StackOverflow
 #
 # * Text Books
