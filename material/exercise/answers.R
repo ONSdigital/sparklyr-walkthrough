@@ -81,8 +81,8 @@ incident_counts
 
 incident_counts %>%
     arrange(desc(count)) %>%
-    head(10)
-    
+    head(10) %>%
+    collect()
 
 
 ##############################################################################################
@@ -91,7 +91,7 @@ incident_counts %>%
 
 ## Exercise 6 ###############################################################################
 
-# >Using SQL, find the top 10 most expensive call outs aggregated by the total sumed cost for 
+# >Using SQL, find the top 10 most expensive call outs aggregated by the total summed cost for 
 # >each AnimalGroup. 
 
 result <- dbGetQuery(sc, 
@@ -101,8 +101,6 @@ result <- dbGetQuery(sc,
             LIMIT 10"
 )
 result
-
-
 
 ############################################################################################
 
