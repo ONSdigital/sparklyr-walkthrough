@@ -66,9 +66,9 @@ def task_transfer_data():
 def task_filter_answers():
     """Converts full material to seperate files for material + exercise answers"""
 
-    src_path = ROOT_DIR / 'src' / 'material' / 'full_walkthrough.py'
-    material_dest_path = ROOT_DIR / 'material' / 'walkthrough.py'
-    exercixe_dest_path = ROOT_DIR / 'material' / 'exercise' / 'answers.py'
+    src_path = ROOT_DIR / 'src' / 'material' / 'full_walkthrough.R'
+    material_dest_path = ROOT_DIR / 'material' / 'walkthrough.R'
+    exercixe_dest_path = ROOT_DIR / 'material' / 'exercise' / 'answers.R'
 
     cmd = (
         filter_out_answers, [src_path, material_dest_path, exercixe_dest_path]

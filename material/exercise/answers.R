@@ -4,8 +4,8 @@
 #>
 #> Rename AnimalGroupParent --> AnimalGroup
 
-rescue = rescue.withColumnRenamed("PumpHoursTotal", "JobHours")
-rescue = rescue.withColumnRenamed("AnimalGroupParent", "AnimalGroup")
+rescue <- rescue %>% rename(JobHours = PumpHoursTotal)
+rescue <- rescue %>% rename(AnimalGroup = AnimalGroupParent)
 
 ########################################################################################
 
@@ -15,12 +15,12 @@ rescue = rescue.withColumnRenamed("AnimalGroupParent", "AnimalGroup")
 
 #> Filter the recent data to find all the those with AnimalGroup equal to 'Fox'
 
-foxes = rescue.filter(rescue.AnimalGroup == 'Fox')
-# Or equivilantly
-foxes = rescue.filter('AnimalGroup == "Fox"')
+foxes <- rescue %>% filter(AnimalGroup == 'Fox')
 
-foxes.limit(10).toPandas()
-foxes.select('DateTimeOfCall', 'Description').show(truncate=False)
+foxes %>% 
+  select(DateTimeOfCall, Description) %>%
+  collect() %>%
+  print()
 
 ##########################################################################################
 
@@ -31,19 +31,19 @@ foxes.select('DateTimeOfCall', 'Description').show(truncate=False)
 #> Sort the incidents in terms of there duration, look at the top 10 and the bottom 10.
 
 #> Do you notice anything strange?
-top_10 = (
-    rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
-    .sort("IncidentDuration", ascending=False)
-    .limit(10)
-)
-top_10.toPandas()
+top_10 <- rescue %>% 
+  select(IncidentNumber, TotalCost, IncidentDuration, Description) %>%
+   arrange(desc(IncidentDuration)) %>%
+   head(10)
 
-bottom_10 = (
-    rescue.select("IncidentNumber", "TotalCost", "IncidentDuration", "Description")
-    .sort("IncidentDuration", ascending=True)
-    .limit(10)
-)
-bottom_10.toPandas()
+top_10
+
+bottom_10 <- rescue %>% 
+  select(IncidentNumber, TotalCost, IncidentDuration, Description) %>%
+   arrange(IncidentDuration) %>%
+   head(10)
+
+bottom_10
 
 ##############################################################################################
 
@@ -52,15 +52,16 @@ bottom_10.toPandas()
 ## Exercise 4 ####################################################################################
 
 #> Add an additional flag to indicate when PropertyCategory is 'Dwelling'.
-rescue = rescue.withColumn(
-    "DwellingFlag", f.when(rescue.PropertyCategory == "Dwelling", 1).otherwise(0)
-)
+rescue <- rescue %>%
+  mutate(DwellingFlag = ifelse(PropertyCategory == "Dwelling", 1, 0))
 
 #> Subset the data to rows when both the 'snake' and 'property' flag is 1
-pet_snakes = rescue.filter(
-    (rescue.SnakeFlag == 1) & (rescue.DwellingFlag == 1) 
-)
-pet_snakes.limit(20).toPandas()
+pet_snakes <- rescue %>% 
+  filter(SnakeFlag == 1 & DwellingFlag == 1)
+
+pet_snakes %>% 
+  collect() %>%
+  print()
 
 ##################################################################################################
 
@@ -70,21 +71,19 @@ pet_snakes.limit(20).toPandas()
 
 #> Get total counts of incidents for each different animal types
 
-incident_counts = (
-    rescue.groupBy('AnimalGroup')
-    .agg(f.count('AnimalGroup'))
-    .toPandas()
-)
+incident_counts <- rescue %>% 
+  group_by(AnimalGroup) %>%
+  summarise(count = n())
+
+incident_counts
 
 #> Sort the results in descending order and show the top 10
 
-incident_counts = (
-    rescue.groupBy('AnimalGroup')
-    .agg(f.count('AnimalGroup'))
-    .sort('count(AnimalGroup)', ascending=False)
-    .limit(10)
-    .toPandas()
-)
+incident_counts %>%
+    arrange(desc(count)) %>%
+    head(10)
+    
+
 
 ##############################################################################################
 
@@ -95,13 +94,14 @@ incident_counts = (
 # >Using SQL, find the top 10 most expensive call outs aggregated by the total sumed cost for 
 # >each AnimalGroup. 
 
-result = spark.sql(
-    """SELECT AnimalGroup, sum(TotalCost) FROM rescue
+result <- dbGetQuery(sc, 
+    "SELECT AnimalGroup, sum(TotalCost) FROM rescue
             GROUP BY AnimalGroup
             ORDER BY sum(TotalCost) DESC
-            LIMIT 10"""
+            LIMIT 10"
 )
-result.show(truncate=False)
+result
+
 
 
 ############################################################################################

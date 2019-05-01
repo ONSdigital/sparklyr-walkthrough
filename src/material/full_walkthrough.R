@@ -43,10 +43,11 @@
 #  
 #  * Setting up the link to Artifactory to install R packages:
 #
-#  r <- getOption("repos")
-#  r['CRAN'] <- "http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/list/cran-org"
-#  options(repos = r)
-#
+# ``` 
+# r <- getOption("repos") 
+# r['CRAN'] <- "http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/list/cran-org"
+# options(repos = r)
+#```
 # * Where `<USERNAME>` is your windows username and `<PASSWORD>` is your hashed password from artifactory
 #    (see instructions, artifactory section; https://share.sp.ons.statistics.gov.uk/sites/odts/wiki/Wiki/Components%20Introduction.aspx)
 

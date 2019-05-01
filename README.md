@@ -51,7 +51,7 @@ project and the contained training material, and allow each participant to work 
 during and after this session. 
 
 *  Trainees can then start their own workbench session by going to the newly copied project, and 
-selecting `Open Workbench`, and choosing `Python 3`, with Engine profile of `0.5 vCPU / 2 GiB Memory`.
+selecting `Open Workbench`, and choosing `R`, with Engine profile of `0.5 vCPU / 2 GiB Memory`.
 
 * All material covered is contained within the `material/` directory. 
 
@@ -60,7 +60,7 @@ selecting `Open Workbench`, and choosing `Python 3`, with Engine profile of `0.5
 
 Beyond this course, note that some additional setup is required when working in DAP, specifically:
   * Authentication to the cluster (Account settings --> Hadoop authentication, enter Windows credentials)
-  * Setting up the link to Artifactory to install Python packages:
+  * Setting up the link to Artifactory to install R packages:
       * r <- getOption("repos")
       * r['CRAN'] <- "http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/list/cran-org"
       * options(repos = r)
