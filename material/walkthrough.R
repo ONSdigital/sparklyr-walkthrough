@@ -16,8 +16,8 @@
 # 
 ### Prerequisites:
 #
-#  * Basic R, 
-#  * SQL and `dplyr` optional but beneficial
+#  * Basic R, dplyr, magrittr 
+#  * SQL is optional but beneficial
 
 ### CDSW Environment
 
@@ -37,25 +37,25 @@
 # own copy of this matieral to work with for this session. Environment variables have also
 # been setup for you. 
 
+#### Install sparklyr package
+install.packages("sparklyr")
+
 # Note, some additional setup is required when working in DAP, specifically:
 #  * Authentication to the cluster (Account settings --> Hadoop authentication, enter windows credentials)
 #
 #  
 #  * Setting up the link to Artifactory to install R packages:
 #
-# ``` 
+# ```r 
 # r <- getOption("repos") 
 # r['CRAN'] <- "http://<USERNAME>:<PASSWORD>@art-p-01/artifactory/list/cran-org"
 # options(repos = r)
 #```
-# * Where `<USERNAME>` is your windows username and `<PASSWORD>` is your hashed password from artifactory
+#  * Where `<USERNAME>` is your windows username and `<PASSWORD>` is your hashed password from artifactory
 #    (see instructions, artifactory section; https://share.sp.ons.statistics.gov.uk/sites/odts/wiki/Wiki/Components%20Introduction.aspx)
 
 
 ### Import all necessary packages to work with Spark
-install.packages("sparklyr")
-
-
 library(sparklyr)
 library(dplyr)
 
@@ -69,7 +69,7 @@ library(dplyr)
 
 # For this Training setup: 
 #  *  max executor cores = 2
-#  *  max executor memory = 2g (this included overheads)
+#  *  max executor memory = 2g (this includes overheads)
 
 my_config <- spark_config()
 my_config$spark.dynamicAllocation.maxExecutors <- 4
@@ -87,7 +87,7 @@ spark_config(sc)
 # Check connection is open
 spark_connection_is_open(sc)
 
-## Sparklyr allows you to write R code to work with data in a Spark cluster. 
+# Sparklyr allows you to write R code to work with data in a Spark cluster. 
 # The dplyr interface means that you can write the same dplyr-style R code, whether you are working with data on your machine 
 # or on a Spark cluster.
 
@@ -95,7 +95,7 @@ spark_connection_is_open(sc)
 ## Load the Data
 #----------------------------
 
-# Use CSV in this session, though most big datasets will be read from HDFS (More on that later)
+# Use CSV in this session, though most big datasets will be read from HDFS (more on that later)
 
 ### From HDFS
 
@@ -104,10 +104,7 @@ src_databases(sc)
 
 # To find what tables are in the database
 tbl_change_db(sc, "training")
-
-# You can execute SQL queries directly against tables within a Spark cluster using a DBI interface. 
-# The result is returned as an R data.frame 
-DBI::dbGetQuery(sc, "SHOW TABLES IN training")
+DBI::dbGetQuery(sc, "show tables in training")
 
 
 # Reading Data from SQL into a spark dataframe
@@ -115,17 +112,20 @@ sdf <- spark_read_table(sc, "department_budget", header = TRUE)
 class(sdf)
 
 
-# Note that the table is not yet displayed
+# Note that only a partial view of the table is displayed (top 10 rows).
 # Spark is built on the concept of transformations and actions.
-#   * **Transformations** are lazily evaluated expressions. This form the set of 
+#   * **Transformations** are lazily evaluated expressions. These form the set of 
 #     instructions that will be sent to the cluster.  
 #   * **Actions** trigger the computation to be performed on the cluster and the 
-#     results accumulated locally in this session.
+#     results sent back to be accumulated locally in this session.
 #
 # Multiple transformations can be combined, and only when an action is triggered 
 # are these executed on the cluster, after which the results are returned. 
 
-head(sdf)
+# To convert a Spark DataFrame to a tibble in R you use `collect()`. Note this will
+# try to bring all the data back into the the current session, so make sure it fits
+# in memory locally.
+df <- collect(sdf)
 
 
 ### Reading in Data From a CSV
@@ -137,21 +137,20 @@ rescue <- spark_read_csv(sc, "/tmp/training/animal-rescue.csv", header=TRUE, inf
 # To get the column names and data types
 glimpse(rescue)
 
-
-# The `head()` function is an action that displays a DataFrame 
-head(rescue)
+# The `head()` function is a transformation that displays the top rows of a DataFrame 
+rescue %>% head(20) %>% collect()
 
 # It can get real messy to display everything this way with wide data, recomendations are:
 # 1.  Subset to fewer columns
 # 2.  convert to data.frame and use `print()`
-
 
 # Option 1 
 rescue %>% 
   select('DateTimeOfCall', 'FinalDescription', 'AnimalGroupParent')
 
 # Option 2
-# Warning using `collect()` will bring back all the data into R, so first subset the rows using `head()`
+# Warning using `collect()` will bring back all the data into R, so first subset the rows 
+# with `head()`
 rescue_df <- rescue %>% head(10) %>% collect()
 print(rescue_df)
 
@@ -249,7 +248,9 @@ n_groups <- rescue %>%
 n_groups
 
 # What are they?
-animal_groups <- rescue %>% distinct(AnimalGroup)
+animal_groups <- rescue %>% 
+    distinct(AnimalGroup) %>% 
+    collect()
 animal_groups
 
 ### Adding Columns and Sorting
@@ -262,7 +263,7 @@ animal_groups
 #
 # Lets add another column that calculates this
 
-# withColumn can be used to either create a new column, or overwrite an existing one.
+# mutate can be used to either create a new column, or overwrite an existing one.
 rescue <- rescue %>% 
   mutate(IncidentDuration = JobHours / EngineCount)
 
@@ -300,13 +301,12 @@ result %>%
 
 ##############################################################################################
 
-# So it looks like we may have a lot of missing values to account for (which is why there are 
-# a lot of blanks).
+# So it looks like we may have a lot of missing values present.
 
 ## Handeling Missing values
 
 # Lets count the number of missing values in these columns. 
-# The `is.na` function can be used with `filter()` to find missing values
+# The `is.na()` function can be used with `filter()` to find missing values
 
 rescue %>% 
   filter(is.na(TotalCost)) %>% 
@@ -323,8 +323,9 @@ rescue <- rescue  %>%
 # Now lets rerun our sorting from above.
 bottom_10 <- rescue %>% 
   select(IncidentNumber, TotalCost, IncidentDuration, Description) %>%
-   arrange(IncidentDuration) %>%
-   head(10)
+  arrange(IncidentDuration) %>%
+  head(10) %>%
+  collect()
 
 bottom_10
 
@@ -344,12 +345,12 @@ rescue <- rescue %>%
   mutate(SnakeFlag = ifelse(AnimalGroup == "Snake", 1, 0))
 
 # Note that we can filter with multiple conditions.
-# * Using the pipe `|` represents OR  
-# * Using `&` or a comma `,` represents AND. 
-
+# Using the pipe `|` represents OR  
+# Using `&` or a comma ',' represents AND. 
 recent_snakes <- rescue %>% 
-  filter(CalYear > 2015 & SnakeFlag == 1)
-
+  filter(CalYear > 2015 & SnakeFlag == 1) %>%
+  collect()
+  
 recent_snakes
 
 ## Exercise 4 ####################################################################################
@@ -366,7 +367,7 @@ recent_snakes
 #----------------------
 
 # Lets look at this more closely and find the average cost by AnimalGroup
-cost_by_animal <- recent_rescue %>% 
+cost_by_animal <- rescue %>% 
   group_by(AnimalGroup) %>% 
   summarise(MeanCost = mean(TotalCost))
 
@@ -375,7 +376,8 @@ glimpse(cost_by_animal)
 # Lets sort by average cost and display the highest
 cost_by_animal <- cost_by_animal %>% 
   arrange(desc(MeanCost)) %>% 
-  head(10)
+  head(10) %>%
+  collect()  
 
 cost_by_animal
 
@@ -401,7 +403,8 @@ goat_vs_horse %>%
 result <- rescue %>%
   filter(AnimalGroup == "Goat") %>% 
   select(AnimalGroup, JobHours, Description) %>%
-  head(10)
+  head(10) %>% 
+  collect()
 
 result
 
@@ -411,15 +414,16 @@ result
 
 # Note, the above was a fair bit of work involving multiple stages. Once we 
 # are more clear with what we want, several of these steps can be combined by
-# chaining them together using a pipe opertator `%>%`. Code written in this way gets long fast, and so its 
-# encouraged to lay it out verticaly with indentation.
+# chaining them together with magrittr pipes. 
 
 avg_cost_by_animal <-
     rescue %>% 
       filter(AnimalGroup == "Horse" | AnimalGroup == "Goat") %>%
       group_by(AnimalGroup) %>%
       summarise(AvgTotal = mean(TotalCost)) %>%
-      arrange(desc(AvgTotal))
+      arrange(desc(AvgTotal)) %>%
+      head(10) %>% 
+      collect()
 
 avg_cost_by_animal
 
@@ -431,7 +435,6 @@ avg_cost_by_animal
 
 #> Sort the results in descending order and show the top 10
 
-    
 
 
 ##############################################################################################
@@ -439,7 +442,8 @@ avg_cost_by_animal
 ### A Few Tips and Tricks
 
 # I've rewritten the above method chaining example using a few additional functions to give it more 
-# flexibly, like `%in%` and making use of mutliple functions to`summarise()` by.
+# flexibly, like `%in%` and making use of mutliple functions to`summarise()` by, 
+#
 
 
 avg_cost_by_animal <- rescue %>%
@@ -482,7 +486,7 @@ outward_code_pop
 # As these columns names are slightly different, we can express this mapping in the
 # on argument.
 rescue_with_pop <- rescue %>% 
-  left_join(outward_code_pop, by =c("PostcodeDistrict" = "OutwardCode"))
+  left_join(outward_code_pop, by=c("PostcodeDistrict" = "OutwardCode"))
 
 
 rescue_with_pop %>%
@@ -494,7 +498,7 @@ rescue_with_pop %>%
 ## Using SQL
 #---------------------------
 
-# As breifly mentioned at the start, you can also swap between sparklyr and sql during your workflow by using the DBI package
+# You can also swap between sparklyr and sql during your workflow by using the DBI package
 
 # As we read this data from CSV (not from a Hive Table), we need to first register a
 # temporary table to use the SQL interface. If you have read in data from an existing SQL 
@@ -513,10 +517,8 @@ result %>% head(10)
 
 ## Exercise 6 ###############################################################################
 
-# >Using SQL, find the top 10 most expensive call outs aggregated by the total sumed cost for 
+# >Using SQL, find the top 10 most expensive call outs aggregated by the total summed cost for 
 # >each AnimalGroup. 
-
-
 
 
 ############################################################################################
@@ -530,16 +532,17 @@ spark_write_parquet(rescue_with_pop, '/tmp/rescue_with_pop.parquet')
 
 # Note that if the file exists, it will not let you overwright it. You must first delete
 # it with the hdfs tool. This can be run from the console with 
-system("hdfs dfs -rm -r /tmp/rescue_with_pop.parquet")
+system('hdfs dfs -rm -r /tmp/rescue_with_pop.parquet')
+
 
 # Also note that each user and workspace will have its own home directory which you can,
 # save work to.
-# ````R
+# ````r
 # username <- 'your-username-on-hue'
 # spark_write_parquet(rescue_with_pop, '/user/{username}/rescue_with_pop.parquet')
 # ````
 
-# Benefits of parquet is that type schema are captured
+# A benefit of parquet is that type schema are captured.
 # Its also a column format which makes loading in subsets of columns a lot faster for 
 # large datasets.
 
