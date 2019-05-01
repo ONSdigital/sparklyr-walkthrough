@@ -104,10 +104,7 @@ src_databases(sc)
 
 # To find what tables are in the database
 tbl_change_db(sc, "training")
-
-# You can execute SQL queries directly against tables within a Spark cluster using a DBI interface. 
-# The result is returned as an R data.frame 
-DBI::dbGetQuery(sc, "SHOW TABLES IN training")
+DBI::dbGetQuery(sc, "show tables in training")
 
 
 # Reading Data from SQL into a spark dataframe
@@ -151,7 +148,8 @@ rescue %>%
   select('DateTimeOfCall', 'FinalDescription', 'AnimalGroupParent')
 
 # Option 2
-# Warning using `collect()` will bring back all the data into R, so first subset the rows using `head()`
+# Warning using `collect()` will bring back all the data into R, so first subset the rows 
+# with limit
 rescue_df <- rescue %>% head(10) %>% collect()
 print(rescue_df)
 
@@ -344,12 +342,10 @@ rescue <- rescue %>%
   mutate(SnakeFlag = ifelse(AnimalGroup == "Snake", 1, 0))
 
 # Note that we can filter with multiple conditions.
-# * Using the pipe `|` represents OR  
-# * Using `&` or a comma `,` represents AND. 
-
+# Using the pipe `|` represents OR  
+# Using `&` or a comma',' represents AND. 
 recent_snakes <- rescue %>% 
   filter(CalYear > 2015 & SnakeFlag == 1)
-
 recent_snakes
 
 ## Exercise 4 ####################################################################################
@@ -411,8 +407,9 @@ result
 
 # Note, the above was a fair bit of work involving multiple stages. Once we 
 # are more clear with what we want, several of these steps can be combined by
-# chaining them together using a pipe opertator `%>%`. Code written in this way gets long fast, and so its 
-# encouraged to lay it out verticaly with indentation.
+# chaining them together. Code written in this way gets long fast, and so its 
+# encouraged to lay it out verticaly with indentation, and use parentheses to
+# get python to evaluate expressions over multiple lines. 
 
 avg_cost_by_animal <-
     rescue %>% 
@@ -439,7 +436,8 @@ avg_cost_by_animal
 ### A Few Tips and Tricks
 
 # I've rewritten the above method chaining example using a few additional functions to give it more 
-# flexibly, like `%in%` and making use of mutliple functions to`summarise()` by.
+# flexibly, like `%in%` and making use of mutliple functions to`summarise()` by, 
+#
 
 
 avg_cost_by_animal <- rescue %>%
@@ -494,7 +492,7 @@ rescue_with_pop %>%
 ## Using SQL
 #---------------------------
 
-# As breifly mentioned at the start, you can also swap between sparklyr and sql during your workflow by using the DBI package
+# You can also swap between sparklyr and sql during your workflow by using the DBI package
 
 # As we read this data from CSV (not from a Hive Table), we need to first register a
 # temporary table to use the SQL interface. If you have read in data from an existing SQL 
@@ -591,6 +589,8 @@ dbGetQuery(sc, 'DROP TABLE IF EXISTS training.my_rescue_table')
 # * Pluralsight Courses
 #
 # * sparklyr Documentation
+#
+# * sparklyr cheatsheet https://ugoproto.github.io/ugo_r_doc/sparklyr.pdf 
 #
 # * StackOverflow
 #
