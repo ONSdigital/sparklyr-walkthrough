@@ -132,7 +132,11 @@ df <- collect(sdf)
 
 #### Data set: Animal rescue incidents by the London Fire Brigade.
 
-rescue <- spark_read_csv(sc, "/tmp/training/animal-rescue.csv", header=TRUE, infer_schema=TRUE)
+rescue <- spark_read_csv(sc, "/tmp/training/animal-rescue.csv", 
+                         header=TRUE, infer_schema=TRUE)
+
+# You can run the below line again to see that 'animalrescue' is now a temporary hive table
+DBI::dbGetQuery(sc, "show tables in training")
 
 # To get the column names and data types
 glimpse(rescue)
@@ -198,8 +202,11 @@ glimpse(rescue)
 
 ### Convert Dates from String to Date format
 
+rescue <- rescue %>% 
+  mutate(DateTimeOfCall = to_date(DateTimeOfCall, "dd/MM/yyyy")) 
+
 rescue %>% 
-  mutate(DateTimeOfCall = to_date(DateTimeOfCall, "dd/MM/yyyy")) %>% 
+  head(10) %>%
   collect() %>% 
   print()
 
@@ -372,6 +379,8 @@ cost_by_animal <- rescue %>%
   summarise(MeanCost = mean(TotalCost))
 
 glimpse(cost_by_animal)
+# Notice the warning here - means that by default it removes NA values, if we 
+# use the na.rm=TRUE argument in the mean function, then the warning will stop
 
 # Lets sort by average cost and display the highest
 cost_by_animal <- cost_by_animal %>% 
@@ -420,7 +429,7 @@ avg_cost_by_animal <-
     rescue %>% 
       filter(AnimalGroup == "Horse" | AnimalGroup == "Goat") %>%
       group_by(AnimalGroup) %>%
-      summarise(AvgTotal = mean(TotalCost)) %>%
+      summarise(AvgTotal = mean(TotalCost, na.rm = TRUE)) %>%
       arrange(desc(AvgTotal)) %>%
       head(10) %>% 
       collect()
@@ -449,9 +458,9 @@ avg_cost_by_animal
 avg_cost_by_animal <- rescue %>%
   filter(AnimalGroup %in%  c("Horse", "Goat", "Cat", "Bird")) %>% 
   group_by(AnimalGroup) %>%
-  summarise(Min = min(TotalCost),
-            Mean = mean(TotalCost),
-            Max = max(TotalCost),
+  summarise(Min = min(TotalCost, na.rm = TRUE),
+            Mean = mean(TotalCost, na.rm = TRUE),
+            Max = max(TotalCost, na.rm = TRUE),
             Count = n()) %>%
   arrange(desc(Mean))
 
@@ -477,7 +486,7 @@ population
 outward_code_pop  <- population %>%
     select(OutwardCode, Total) %>%
     group_by(OutwardCode) %>%
-    summarise(Population = sum(Total))
+    summarise(Population = sum(Total, na.rm = TRUE))
 
 outward_code_pop 
 
@@ -500,12 +509,14 @@ rescue_with_pop %>%
 
 # You can also swap between sparklyr and sql during your workflow by using the DBI package
 
-# As we read this data from CSV (not from a Hive Table), we need to first register a
-# temporary table to use the SQL interface. If you have read in data from an existing SQL 
-# table, you don't need this step
+# As we read this data from CSV using `spark_read_csv` (not from a Hive Table), 
+# it has been registered to HIVE as a tempory table using the original name of the csv file (`animalrescue`)
+# If we want to query the `rescue` table that we have cleaned we first need to register it  
+
 library(DBI)
 
-sdf_register(rescue, 'rescue')
+sdf_register(rescue, "rescue")
+dbGetQuery(sc, "show tables")
 
 # You can then do SQL queries 
 result <- dbGetQuery(sc, 
@@ -513,6 +524,8 @@ result <- dbGetQuery(sc,
             GROUP BY AnimalGroup
             ORDER BY count(AnimalGroup) DESC"
 )
+
+
 result %>% head(10)
 
 ## Exercise 6 ###############################################################################
@@ -528,19 +541,23 @@ result %>% head(10)
 #------------------------------
 
 ## To HDFS 
-spark_write_parquet(rescue_with_pop, '/tmp/rescue_with_pop.parquet')
-
+# ```r
+# spark_write_parquet(rescue_with_pop, '/tmp/rescue_with_pop.parquet')
+# ```
 # Note that if the file exists, it will not let you overwright it. You must first delete
 # it with the hdfs tool. This can be run from the console with 
-system('hdfs dfs -rm -r /tmp/rescue_with_pop.parquet')
+# ```r
+# system("hdfs dfs -rm -r /tmp/rescue_with_pop.parquet")
+# ```
 
 
 # Also note that each user and workspace will have its own home directory which you can,
 # save work to.
-# ````r
+# ```r
 # username <- 'your-username-on-hue'
-# spark_write_parquet(rescue_with_pop, '/user/{username}/rescue_with_pop.parquet')
-# ````
+# spark_write_parquet(rescue_with_pop, paste0('/user/', username, '/rescue_with_pop.parquet'))
+# system(paste0("hdfs dfs -rm -r /user/", username, "/rescue_with_pop.parquet"))
+# ```
 
 # A benefit of parquet is that type schema are captured.
 # Its also a column format which makes loading in subsets of columns a lot faster for 
@@ -578,7 +595,7 @@ dbGetQuery(sc, 'DROP TABLE IF EXISTS training.my_rescue_table')
 
 ### Editor
 
-#* double click = selct word; tripple click = select whole line
+#* double click = select word; tripple click = select whole line
 
 #* Tab completion
 
