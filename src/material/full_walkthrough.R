@@ -132,7 +132,8 @@ df <- collect(sdf)
 
 #### Data set: Animal rescue incidents by the London Fire Brigade.
 
-rescue <- spark_read_csv(sc, "/tmp/training/animal-rescue.csv", header=TRUE, infer_schema=TRUE)
+rescue <- spark_read_csv(sc, "/tmp/training/animal-rescue.csv", 
+                         header=TRUE, infer_schema=TRUE)
 
 # To get the column names and data types
 glimpse(rescue)
@@ -200,8 +201,11 @@ rescue <- rescue %>% rename(AnimalGroup = AnimalGroupParent)
 
 ### Convert Dates from String to Date format
 
+rescue <- rescue %>% 
+  mutate(DateTimeOfCall = to_date(DateTimeOfCall, "dd/MM/yyyy")) 
+
 rescue %>% 
-  mutate(DateTimeOfCall = to_date(DateTimeOfCall, "dd/MM/yyyy")) %>% 
+  head(10) %>%
   collect() %>% 
   print()
 
@@ -396,6 +400,8 @@ cost_by_animal <- rescue %>%
   summarise(MeanCost = mean(TotalCost))
 
 glimpse(cost_by_animal)
+# Notice the warning here - means that by default it removes NA values, if we 
+# use the na.rm=TRUE argument in the mean function, then the warning will stop
 
 # Lets sort by average cost and display the highest
 cost_by_animal <- cost_by_animal %>% 
@@ -444,7 +450,7 @@ avg_cost_by_animal <-
     rescue %>% 
       filter(AnimalGroup == "Horse" | AnimalGroup == "Goat") %>%
       group_by(AnimalGroup) %>%
-      summarise(AvgTotal = mean(TotalCost)) %>%
+      summarise(AvgTotal = mean(TotalCost, na.rm = TRUE)) %>%
       arrange(desc(AvgTotal)) %>%
       head(10) %>% 
       collect()
@@ -481,9 +487,9 @@ incident_counts %>%
 avg_cost_by_animal <- rescue %>%
   filter(AnimalGroup %in%  c("Horse", "Goat", "Cat", "Bird")) %>% 
   group_by(AnimalGroup) %>%
-  summarise(Min = min(TotalCost),
-            Mean = mean(TotalCost),
-            Max = max(TotalCost),
+  summarise(Min = min(TotalCost, na.rm = TRUE),
+            Mean = mean(TotalCost, na.rm = TRUE),
+            Max = max(TotalCost, na.rm = TRUE),
             Count = n()) %>%
   arrange(desc(Mean))
 
@@ -509,7 +515,7 @@ population
 outward_code_pop  <- population %>%
     select(OutwardCode, Total) %>%
     group_by(OutwardCode) %>%
-    summarise(Population = sum(Total))
+    summarise(Population = sum(Total, na.rm = TRUE))
 
 outward_code_pop 
 
