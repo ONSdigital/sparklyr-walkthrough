@@ -580,23 +580,17 @@ result
 #------------------------------
 
 ## To HDFS 
+# Note that each user and workspace will have its own home directory which you can save work to.
 # ```r
-# spark_write_parquet(rescue_with_pop, '/tmp/rescue_with_pop.parquet')
+# username <- 'your-username-on-hue'
+# spark_write_parquet(rescue_with_pop, paste0('/user/', username, '/rescue_with_pop.parquet'))
 # ```
 # Note that if the file exists, it will not let you overwright it. You must first delete
 # it with the hdfs tool. This can be run from the console with 
 # ```r
-# system("hdfs dfs -rm -r /tmp/rescue_with_pop.parquet")
-# ```
-
-
-# Also note that each user and workspace will have its own home directory which you can,
-# save work to.
-# ```r
-# username <- 'your-username-on-hue'
-# spark_write_parquet(rescue_with_pop, paste0('/user/', username, '/rescue_with_pop.parquet'))
 # system(paste0("hdfs dfs -rm -r /user/", username, "/rescue_with_pop.parquet"))
 # ```
+
 
 # A benefit of parquet is that type schema are captured.
 # Its also a column format which makes loading in subsets of columns a lot faster for 
